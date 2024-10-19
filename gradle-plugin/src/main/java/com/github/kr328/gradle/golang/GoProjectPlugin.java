@@ -67,14 +67,14 @@ public class GoProjectPlugin implements Plugin<Project> {
                     }
             );
 
-            final String externalNativeBuild = "externalNativeBuild" + capitalize(variant.getName());
+            // final String externalNativeBuild = "externalNativeBuild" + capitalize(variant.getName());
 
             // project.getTasks().getByName(externalNativeBuild).dependsOn(buildTask);
 
             final String preBuild = "pre" + capitalize(variant.getName()) + "Build";
 
             project.getTasks().getByName(preBuild).dependsOn(buildTask);
-            System.out.println(config);
+            // System.out.println(config);
 
             project.getTasks().forEach(task -> {
                 if (task.getName().startsWith("buildCMake")) {
@@ -119,6 +119,7 @@ public class GoProjectPlugin implements Plugin<Project> {
                             productFlavor.stream().flatMap(p -> p.getBuildTags().stream())
                     ).collect(Collectors.toSet());
 
+                    /*
                     System.out.println("buildTypeTag");
                     System.out.println(buildType.getBuildTags());
                     System.out.println("productFlavorTag");
@@ -127,6 +128,7 @@ public class GoProjectPlugin implements Plugin<Project> {
                     }
 
                     System.out.println(buildTags);
+                    */
 
                     return new GoBuildConfig(
                             moduleDir,
