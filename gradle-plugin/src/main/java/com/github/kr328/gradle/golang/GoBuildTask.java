@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public abstract class BuildTask extends DefaultTask {
+public abstract class GoBuildTask extends DefaultTask {
     private static Map<String, String> buildEnvironment(File ndkDirectory, String abi, int sdkVersion) {
         ArrayList<String> toolchainsRoot = new ArrayList<>();
 

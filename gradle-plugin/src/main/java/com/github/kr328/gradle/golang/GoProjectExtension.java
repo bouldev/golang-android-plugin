@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
-public class ProjectExtension extends VariantExtension {
+public class GoProjectExtension extends GoVariantExtension {
     private String moduleDirectory;
     private String libraryName;
     private String packageName;

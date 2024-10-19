@@ -10,6 +10,6 @@ import java.util.Set;
 @EqualsAndHashCode
 @Data
 @NoArgsConstructor
-public class VariantExtension {
+public class GoVariantExtension {
     private Set<String> buildTags = new HashSet<>();
 }

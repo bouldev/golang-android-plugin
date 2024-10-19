@@ -8,29 +8,47 @@ Golang building plugin for Android project.
   ```kotlin
   repositories {
       // ...
-      maven("https://maven.kr328.app/releases")
+      maven("https://raw.githubusercontent.com/bouldev/maven-repo/main/releases")
   }
   dependencies {
       // ...
-      classpath("com.github.kr328.golang:gradle-plugin:1.0.0")
+      classpath("com.github.kr328.golang:gradle-plugin:1.0.6")
   }
   ```
 
 - Apply plugin to project
   ```kotlin
   plugins {
-      id("golang-android")
+      id("com.github.kr328.gradle.golang")
   }
   ```
 
-- Configure source sets
+- Configure your source and build flags
   ```kotlin
-  golang {
-      sourceSets {
-          create("main") {
-              fileName.set("libgolang.so")
-              srcDir.set(file("src/main/go"))
-              tags = listOf("with_android")
+  android {
+      golang {
+          libraryName = "my-golang-library"
+          packageName = "my-golang/application"
+          moduleDirectory = "src/main/go"
+      }
+      // buildFlags must add to productFlavors or buildType
+      productFlavors {
+          create("dev") {
+              extensions.configure<GoVariantExtension> {
+                  buildTags.addAll(setOf("enable_dev_features"))
+              }
+          }
+          all {
+              extensions.configure<GoVariantExtension> {
+                  buildTags.addAll(setOf("android"))
+              }
+          }
+      }
+      buildType {
+          debug {
+              extensions.configure<GoVariantExtension> {
+                  buildTags.addAll(setOf("enable_debug_trace"))
+              }
           }
       }
   }

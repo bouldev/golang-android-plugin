@@ -10,7 +10,7 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @NonNull
-public class BuildConfig implements VariantExtension {
+public class GoBuildConfig implements VariantExtension {
     private final String moduleDirectory;
     private final String libraryName;
     private final String packageName;

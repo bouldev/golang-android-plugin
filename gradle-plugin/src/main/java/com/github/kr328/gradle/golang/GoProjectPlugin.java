@@ -13,33 +13,30 @@ import org.gradle.api.tasks.TaskProvider;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("UnstableApiUsage")
-public class ProjectPlugin implements Plugin<Project> {
+public class GoProjectPlugin implements Plugin<Project> {
     private static String capitalize(String str) {
         return Arrays.stream(str.split("[-_]"))
                 .map(s -> Character.toUpperCase(s.charAt(0)) + s.substring(1))
                 .collect(Collectors.joining());
     }
 
-    private static File getOutputDir(Project project, String name) {
-        return Paths.get(project.getBuildDir().getAbsolutePath(), "outputs", "golang", name)
+    public static File getOutputDir(Project project, String name) {
+        return Paths.get(project.getLayout().getBuildDirectory().getAsFile().get().getAbsolutePath(), "outputs", "golang", name)
                 .toAbsolutePath().toFile();
     }
 
-    private static void decorateVariant(Project project, Set<String> abiFilters, String name, BuildConfig config) {
+    private static void decorateVariant(Project project, Set<String> abiFilters, Variant variant, GoBuildConfig config) {
         final File ndkDirectory = project.getExtensions().getByType(BaseExtension.class).getNdkDirectory();
 
         for (final String abi : abiFilters) {
-            final TaskProvider<BuildTask> buildTask = project.getTasks().register(
-                    String.format("externalGolangBuild%s[%s]", capitalize(name), abi),
-                    BuildTask.class,
+            final TaskProvider<GoBuildTask> buildTask = project.getTasks().register(
+                    String.format("externalGolangBuild%s[%s]", capitalize(variant.getName()), abi),
+                    GoBuildTask.class,
                     (task) -> {
                         task.getNdkDirectory().set(ndkDirectory);
 
@@ -55,7 +52,7 @@ public class ProjectPlugin implements Plugin<Project> {
                             task.getPackageName().set(config.getPackageName());
                         }
 
-                        task.getDestinationDir().set(getOutputDir(project, name));
+                        task.getDestinationDir().set(getOutputDir(project, variant.getName()));
 
                         if (config.getLibraryName() == null) {
                             task.getLibraryName().set("gojni");
@@ -70,9 +67,14 @@ public class ProjectPlugin implements Plugin<Project> {
                     }
             );
 
-            final String externalNativeBuild = "externalNativeBuild" + capitalize(name);
+            final String externalNativeBuild = "externalNativeBuild" + capitalize(variant.getName());
 
-            project.getTasks().getByName(externalNativeBuild).dependsOn(buildTask);
+            // project.getTasks().getByName(externalNativeBuild).dependsOn(buildTask);
+
+            final String preBuild = "pre" + capitalize(variant.getName()) + "Build";
+
+            project.getTasks().getByName(preBuild).dependsOn(buildTask);
+            System.out.println(config);
 
             project.getTasks().forEach(task -> {
                 if (task.getName().startsWith("buildCMake")) {
@@ -88,13 +90,13 @@ public class ProjectPlugin implements Plugin<Project> {
             throw new GradleException("Android plugin not applied");
         }
 
-        final ProjectExtension global = target.getExtensions().create("golang", ProjectExtension.class);
+        final GoProjectExtension global = target.getExtensions().create("golang", GoProjectExtension.class);
         final AndroidComponentsExtension<?, ?, ?> components = target.getExtensions().getByType(AndroidComponentsExtension.class);
 
         components.registerExtension(
                 new DslExtension.Builder("golang")
-                        .extendBuildTypeWith(VariantExtension.class)
-                        .extendProductFlavorWith(VariantExtension.class)
+                        .extendBuildTypeWith(GoVariantExtension.class)
+                        .extendProductFlavorWith(GoVariantExtension.class)
                         .build(),
                 (config) -> {
                     final Variant variant = config.getVariant();
@@ -104,8 +106,8 @@ public class ProjectPlugin implements Plugin<Project> {
                         throw new GradleException("External NDK build is required");
                     }
 
-                    final VariantExtension buildType = config.buildTypeExtension(VariantExtension.class);
-                    final List<VariantExtension> productFlavor = config.productFlavorsExtensions(VariantExtension.class);
+                    final GoVariantExtension buildType = config.buildTypeExtension(GoVariantExtension.class);
+                    final List<GoVariantExtension> productFlavor = config.productFlavorsExtensions(GoVariantExtension.class);
 
                     final Set<String> abiFilters = externalNativeBuild.getAbiFilters().get();
                     final String moduleDir = global.getModuleDirectory();
@@ -117,12 +119,21 @@ public class ProjectPlugin implements Plugin<Project> {
                             productFlavor.stream().flatMap(p -> p.getBuildTags().stream())
                     ).collect(Collectors.toSet());
 
-                    return new BuildConfig(
+                    System.out.println("buildTypeTag");
+                    System.out.println(buildType.getBuildTags());
+                    System.out.println("productFlavorTag");
+                    for (GoVariantExtension extension : productFlavor) {
+                        System.out.println(extension.getBuildTags());
+                    }
+
+                    System.out.println(buildTags);
+
+                    return new GoBuildConfig(
                             moduleDir,
                             libraryName,
                             packageName, abiFilters,
                             buildTags,
-                            config.getVariant().getMinSdkVersion().getApiLevel(),
+                            config.getVariant().getMinSdk().getApiLevel(),
                             isDebuggable
                     );
                 }
@@ -135,7 +146,7 @@ public class ProjectPlugin implements Plugin<Project> {
         });
 
         components.onVariants(components.selector().all(), (variant) -> {
-            final BuildConfig config = variant.getExtension(BuildConfig.class);
+            final GoBuildConfig config = variant.getExtension(GoBuildConfig.class);
             if (config == null) {
                 return;
             }
@@ -144,7 +155,7 @@ public class ProjectPlugin implements Plugin<Project> {
                     decorateVariant(
                             target,
                             Objects.requireNonNull(variant.getExternalNativeBuild()).getAbiFilters().get(),
-                            variant.getName(),
+                            variant,
                             config
                     )
             );

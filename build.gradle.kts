@@ -1,6 +1,6 @@
 subprojects {
     group = "com.github.kr328.gradle.golang"
-    version = "1.0.5"
+    version = "1.0.6"
 
     repositories {
         mavenCentral()
